@@ -1,5 +1,13 @@
 #include <stdio.h>
+extern "C"
+{
 #include <raylib.h>
+#include <rlgl.h>
+#define RAYGUI_IMPLEMENTATION
+#include "raygui.h"
+}
+
+float sv = 0;
 
 /// @brief i_data[], o_data[], i_ld
 struct REG
@@ -25,10 +33,16 @@ struct MUX
     const int fontsize = 18;
 
     float x, y;
+    float rotation;
     const char *label;
 
     void draw()
     {
+        rlPushMatrix();
+
+        rlTranslatef(x, y, 0.0f);
+        rlRotatef(rotation, 0, 0.0f, 1.0f);
+        rlTranslatef(sv, 0, 0.0f);
 
         DrawRectangle(x, y, rectw, h, WHITE);
         DrawText(label,
@@ -46,6 +60,7 @@ struct MUX
             {x + rectw, y + h},
             {x + rectw, y},
             BLACK);
+        rlPopMatrix();
     }
 } MX_MAR;
 
@@ -70,15 +85,24 @@ int main(int argc, char **argv)
     MX_MAR.label = "MAR";
     MX_MAR.x = 50;
     MX_MAR.y = 200;
+    MX_MAR.rotation = 0;
 
     InitWindow(600, 400, "Little Cpu");
 
     SetTargetFPS(30);
-
+    bool rotate = 0;
     while (!WindowShouldClose())
     {
+        if (rotate)
+            MX_MAR.rotation += .5f;
         BeginDrawing();
         ClearBackground(BLACK);
+
+        if (GuiCheckBox((Rectangle){100, 0, 60, 18}, "Spin!", &rotate))
+            MX_MAR.rotation = 0;
+
+        GuiSlider((Rectangle){100, 20, 60, 18}, "L", "R", &sv, 0, 1);
+
         PC.draw();
         MAR.draw();
         MDR.draw();

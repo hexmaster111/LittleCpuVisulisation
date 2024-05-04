@@ -3,4 +3,4 @@ set -e
 if ! test -d bin; then
     mkdir bin
 fi
-cc src/main.cpp -o bin/main -lraylib -lm
+cc -ggdb src/main.cpp  -o bin/main -lraylib -lm -std=c++11
