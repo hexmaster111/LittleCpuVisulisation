@@ -7,7 +7,8 @@ extern "C"
 #include "raygui.h"
 }
 
-float sv = 0;
+float sx = 0;
+float sy = 0;
 
 /// @brief i_data[], o_data[], i_ld
 struct REG
@@ -39,10 +40,9 @@ struct MUX
     void draw()
     {
         rlPushMatrix();
-
         rlTranslatef(x, y, 0.0f);
-        rlRotatef(rotation, 0, 0.0f, 1.0f);
-        rlTranslatef(sv, 0, 0.0f);
+        rlRotatef(rotation, 0, 0, 1);
+        rlTranslatef(-x, -y, 0.0f);
 
         DrawRectangle(x, y, rectw, h, WHITE);
         DrawText(label,
@@ -87,21 +87,22 @@ int main(int argc, char **argv)
     MX_MAR.y = 200;
     MX_MAR.rotation = 0;
 
-    InitWindow(600, 400, "Little Cpu");
+    InitWindow(800, 600, "Little Cpu");
 
     SetTargetFPS(30);
     bool rotate = 0;
     while (!WindowShouldClose())
     {
-        if (rotate)
-            MX_MAR.rotation += .5f;
+        // if (rotate)
         BeginDrawing();
         ClearBackground(BLACK);
 
         if (GuiCheckBox((Rectangle){100, 0, 60, 18}, "Spin!", &rotate))
             MX_MAR.rotation = 0;
 
-        GuiSlider((Rectangle){100, 20, 60, 18}, "L", "R", &sv, 0, 1);
+        GuiSlider((Rectangle){100, 20, 60, 18}, "-", "+ x", &sx, 0, 100);
+        GuiSlider((Rectangle){100, 20 + 18, 60, 18}, "-", "+ y", &sy, 0, 100);
+        MX_MAR.rotation = sx;
 
         PC.draw();
         MAR.draw();
