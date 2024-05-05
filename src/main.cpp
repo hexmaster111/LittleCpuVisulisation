@@ -1,14 +1,14 @@
 #include <stdio.h>
+#include <assert.h>
 extern "C"
 {
 #include <raylib.h>
 #include <rlgl.h>
+#define RL_VECTOR4_TYPE
+#include <raymath.h>
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 }
-
-float sx = 0;
-float sy = 0;
 
 /// @brief i_data[], o_data[], i_ld
 struct REG
@@ -17,12 +17,21 @@ struct REG
     const int h = 32;
     const int fontsize = 18;
 
-    float x, y;
     const char *label;
+    float rotation;
+    Rectangle pos = {0, 0, w, h};
+
     void draw()
     {
-        DrawRectangle(x, y, w, h, WHITE);
-        DrawText(label, x + (w / 2) - (MeasureText(label, fontsize) / 2), y, fontsize, BLACK);
+        rlPushMatrix();
+        {
+            rlTranslatef(pos.x, pos.y, 0.0f);
+            rlRotatef(rotation, 0, 0, 1);
+            rlTranslatef(-pos.x - w / 2, -pos.y, 0.0f);
+            DrawRectangle(pos.x, pos.y, w, h, WHITE);
+            DrawText(label, pos.x + (w / 2) - (MeasureText(label, fontsize) / 2), pos.y + 8, fontsize, BLACK);
+        }
+        rlPopMatrix();
     }
 } PC, MAR, MDR;
 
@@ -33,82 +42,162 @@ struct MUX
     const int h = 32;
     const int fontsize = 18;
 
-    float x, y;
+    Rectangle pos = {0, 0, rectw + triw * 2, h};
+
     float rotation;
     const char *label;
 
     void draw()
     {
         rlPushMatrix();
-        rlTranslatef(x, y, 0.0f);
-        rlRotatef(rotation, 0, 0, 1);
-        rlTranslatef(-x, -y, 0.0f);
+        {
+            rlTranslatef(pos.x, pos.y, 0.0f);
+            rlRotatef(rotation, 0, 0, 1);
+            rlTranslatef(-pos.x - rectw / 2, -pos.y, 0.0f);
 
-        DrawRectangle(x, y, rectw, h, WHITE);
-        DrawText(label,
-                 (x + rectw / 2) - (MeasureText(label, fontsize) / 2), y,
-                 fontsize, BLACK);
+            DrawRectangle(pos.x, pos.y, rectw, h, WHITE);
+            DrawText(label,
+                     (pos.x + rectw / 2) - (MeasureText(label, fontsize) / 2), pos.y,
+                     fontsize, BLACK);
 
-        DrawTriangle(
-            {x + triw, y},
-            {x, y},
-            {x, y + h},
-            BLACK);
+            DrawTriangle(
+                {pos.x + triw, pos.y},
+                {pos.x, pos.y},
+                {pos.x, pos.y + pos.height},
+                BLACK);
 
-        DrawTriangle(
-            {(x + rectw) - triw, y},
-            {x + rectw, y + h},
-            {x + rectw, y},
-            BLACK);
-        rlPopMatrix();
+            DrawTriangle(
+                {(pos.x + rectw) - triw, pos.y},
+                {pos.x + rectw, pos.y + pos.height},
+                {pos.x + rectw, pos.y},
+                BLACK);
+            rlPopMatrix();
+        }
     }
-} MX_MAR;
+} MX_MAR, MX_PC, MX_ACC;
 
 struct WIRE
 {
 };
 
+struct BLOCK
+{
+    Rectangle *rect;
+    float *rotation;
+};
+
+const int dragables_len = 6;
+BLOCK dragables[dragables_len] = {
+    {&MX_MAR.pos, &MX_MAR.rotation},
+    {&MX_PC.pos, &MX_PC.rotation},
+    {&MX_ACC.pos, &MX_ACC.rotation},
+    {&PC.pos, &PC.rotation},
+    {&MAR.pos, &MAR.rotation},
+    {&MDR.pos, &MDR.rotation},
+
+};
+
+struct CLICK_DRAG_HANDLER
+{
+private:
+    BLOCK curr_item = {};
+    Vector2 pos_in_item = {};
+
+    inline Vector4 ToVect(Rectangle r)
+    {
+        return {r.x, r.y, r.width, r.height};
+    }
+
+    inline Rectangle ToRect(Vector4 v)
+    {
+        return {v.x, v.y, v.z, v.w};
+    }
+
+public:
+    void main()
+    {
+        if (curr_item.rect == 0)
+        {
+            if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+            {
+                for (size_t i = 0; i < dragables_len; i++)
+                {
+                    Rectangle *c = dragables[i].rect;
+                    assert(c != NULL && 'NULL WATCHABLE RECT');
+
+                    if (CheckCollisionPointRec(GetMousePosition(), *c))
+                    {
+                        fprintf(stdout, "your clicking on %p!\n", c);
+                        curr_item = dragables[i];
+                    }
+                }
+            }
+        }
+
+        if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+        {
+            curr_item = {0};
+        }
+        else if (curr_item.rect != 0)
+        {
+
+            Vector2 delta = GetMouseDelta();
+
+            if (IsKeyDown(KEY_R))
+            {
+                *curr_item.rotation += delta.x;
+                return;
+            }
+
+            if (IsKeyReleased(KEY_R))
+            {
+                float currRot = *curr_item.rotation;
+
+                curr_item = {0};
+                return;
+            }
+
+            curr_item.rect->x += delta.x;
+            curr_item.rect->y += delta.y;
+        }
+    }
+} CLICK_DRAG;
+
 int main(int argc, char **argv)
 {
+    int x = 100;
+    int y = 50;
     PC.label = "PC";
-    PC.x = 50;
-    PC.y = 50;
+    PC.pos.x = x;
+    PC.pos.y = y;
 
     MAR.label = "MAR";
-    MAR.x = 50;
-    MAR.y = 100;
+    MAR.pos.x = x;
+    MAR.pos.y = y += 50;
 
     MDR.label = "MDR";
-    MDR.x = 50;
-    MDR.y = 150;
+    MDR.pos.x = x;
+    MDR.pos.y = y += 50;
 
     MX_MAR.label = "MAR";
-    MX_MAR.x = 50;
-    MX_MAR.y = 200;
+    MX_MAR.pos.x = x;
+    MX_MAR.pos.y = y += 50;
     MX_MAR.rotation = 0;
 
     InitWindow(800, 600, "Little Cpu");
 
     SetTargetFPS(30);
-    bool rotate = 0;
     while (!WindowShouldClose())
     {
-        // if (rotate)
+
+        CLICK_DRAG.main();
+
         BeginDrawing();
         ClearBackground(BLACK);
-
-        if (GuiCheckBox((Rectangle){100, 0, 60, 18}, "Spin!", &rotate))
-            MX_MAR.rotation = 0;
-
-        GuiSlider((Rectangle){100, 20, 60, 18}, "-", "+ x", &sx, 0, 100);
-        GuiSlider((Rectangle){100, 20 + 18, 60, 18}, "-", "+ y", &sy, 0, 100);
-        MX_MAR.rotation = sx;
-
         PC.draw();
         MAR.draw();
         MDR.draw();
         MX_MAR.draw();
-
         DrawFPS(0, 0);
         EndDrawing();
     }
