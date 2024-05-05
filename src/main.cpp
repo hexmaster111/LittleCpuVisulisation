@@ -13,66 +13,49 @@ extern "C"
 /// @brief i_data[], o_data[], i_ld
 struct REG
 {
-    const int w = 100;
-    const int h = 32;
+    const float w = 100;
+    const float h = 32;
     const int fontsize = 18;
 
     const char *label;
-    float rotation;
     Rectangle pos = {0, 0, w, h};
 
     void draw()
     {
-        rlPushMatrix();
-        {
-            rlTranslatef(pos.x, pos.y, 0.0f);
-            rlRotatef(rotation, 0, 0, 1);
-            rlTranslatef(-pos.x - w / 2, -pos.y, 0.0f);
-            DrawRectangle(pos.x, pos.y, w, h, WHITE);
-            DrawText(label, pos.x + (w / 2) - (MeasureText(label, fontsize) / 2), pos.y + 8, fontsize, BLACK);
-        }
-        rlPopMatrix();
+        DrawRectangle(pos.x, pos.y, w, h, WHITE);
+        DrawText(label, pos.x + (w / 2) - (MeasureText(label, fontsize) / 2), pos.y + 8, fontsize, BLACK);
     }
 } PC, MAR, MDR;
 
 struct MUX
 {
-    const int triw = 25 / 2;
-    const int rectw = 100;
+    const float triw = 25 / 2;
+    const float rectw = 100;
     const int h = 32;
     const int fontsize = 18;
 
-    Rectangle pos = {0, 0, rectw + triw * 2, h};
+    Rectangle pos = {0, 0, rectw + triw * 2, static_cast<float>(h)};
 
-    float rotation;
     const char *label;
 
     void draw()
     {
-        rlPushMatrix();
-        {
-            rlTranslatef(pos.x, pos.y, 0.0f);
-            rlRotatef(rotation, 0, 0, 1);
-            rlTranslatef(-pos.x - rectw / 2, -pos.y, 0.0f);
+        DrawRectangle(pos.x, pos.y, rectw, h, WHITE);
+        DrawText(label,
+                 (pos.x + rectw / 2) - (MeasureText(label, fontsize) / 2), pos.y,
+                 fontsize, BLACK);
 
-            DrawRectangle(pos.x, pos.y, rectw, h, WHITE);
-            DrawText(label,
-                     (pos.x + rectw / 2) - (MeasureText(label, fontsize) / 2), pos.y,
-                     fontsize, BLACK);
+        DrawTriangle(
+            {pos.x + triw, pos.y},
+            {pos.x, pos.y},
+            {pos.x, pos.y + pos.height},
+            BLACK);
 
-            DrawTriangle(
-                {pos.x + triw, pos.y},
-                {pos.x, pos.y},
-                {pos.x, pos.y + pos.height},
-                BLACK);
-
-            DrawTriangle(
-                {(pos.x + rectw) - triw, pos.y},
-                {pos.x + rectw, pos.y + pos.height},
-                {pos.x + rectw, pos.y},
-                BLACK);
-            rlPopMatrix();
-        }
+        DrawTriangle(
+            {(pos.x + rectw) - triw, pos.y},
+            {pos.x + rectw, pos.y + pos.height},
+            {pos.x + rectw, pos.y},
+            BLACK);
     }
 } MX_MAR, MX_PC, MX_ACC;
 
@@ -83,17 +66,16 @@ struct WIRE
 struct BLOCK
 {
     Rectangle *rect;
-    float *rotation;
 };
 
 const int dragables_len = 6;
 BLOCK dragables[dragables_len] = {
-    {&MX_MAR.pos, &MX_MAR.rotation},
-    {&MX_PC.pos, &MX_PC.rotation},
-    {&MX_ACC.pos, &MX_ACC.rotation},
-    {&PC.pos, &PC.rotation},
-    {&MAR.pos, &MAR.rotation},
-    {&MDR.pos, &MDR.rotation},
+    {&MX_MAR.pos},
+    {&MX_PC.pos},
+    {&MX_ACC.pos},
+    {&PC.pos},
+    {&MAR.pos},
+    {&MDR.pos},
 
 };
 
@@ -143,20 +125,6 @@ public:
 
             Vector2 delta = GetMouseDelta();
 
-            if (IsKeyDown(KEY_R))
-            {
-                *curr_item.rotation += delta.x;
-                return;
-            }
-
-            if (IsKeyReleased(KEY_R))
-            {
-                float currRot = *curr_item.rotation;
-
-                curr_item = {0};
-                return;
-            }
-
             curr_item.rect->x += delta.x;
             curr_item.rect->y += delta.y;
         }
@@ -182,7 +150,6 @@ int main(int argc, char **argv)
     MX_MAR.label = "MAR";
     MX_MAR.pos.x = x;
     MX_MAR.pos.y = y += 50;
-    MX_MAR.rotation = 0;
 
     InitWindow(800, 600, "Little Cpu");
 
